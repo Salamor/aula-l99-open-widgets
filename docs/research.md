@@ -92,7 +92,7 @@ A few comparable keyboards with screens exist in the market:
 - **Royal Kludge S98 / M87 / M75** — small OLED/TFT info displays (not touch, not interactive)
 - **MiraBox K1W** (Kickstarter, 2026) — 6 individual LCD keys, browser-based Web UI, open SDK promised
 - **MMOBIEL stream deck keyboard** — 6 LCD macro keys, uses Elgato Stream Deck software
-- **Corsair K100 Air** — integrated Stream Deck keys, ~400€
+- **Corsair Galleon 100SD** — integrated Stream Deck keys, ~350€
 
 **None of these combine a large touchscreen with an open software ecosystem.** The L99 has the hardware. This project aims to build the software.
 
