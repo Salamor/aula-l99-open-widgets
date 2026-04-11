@@ -108,11 +108,15 @@ Wireshark + USBPcap will capture every packet exchanged during these operations.
 
 ## 8 AULA WebHID drivers — an inspectable entry point
 AULA has developed browser-based WebHID drivers for some of their keyboard lines, accessible directly from any Chromium-based browser (Chrome, Edge, Opera). These are live web apps that communicate with the keyboard via the WebHID API — no installation required.
+
 ModelURLWIN60/68HE Standarddevice.aulacn.comWIN60/68HE PRO/MAXwin.aulacn.comHERO68 Standardhero.aulastar.comHERO68 ULTRA / PRO/MAXmagnet.aulastar.com
+
 Important caveat: these web drivers are for AULA's Hall Effect / magnetic switch keyboard lines, not for the L99. The L99 only has a Windows executable driver.
+
 Why this matters anyway:
 These web apps are built with JavaScript — meaning their source code is fully readable in any browser's DevTools (F12 → Sources). A developer can open device.aulacn.com, inspect the JS, and see exactly how AULA structures their WebHID commands, what packet formats they use, and how they initialize communication with the keyboard.
 Even if the L99's protocol is slightly different, this gives a concrete, inspectable reference for how AULA thinks about HID communication — without needing the hardware or any reverse engineering tools.
+
 This is a unique advantage that most reverse engineering projects don't have: the manufacturer accidentally published their own protocol implementation. Someone comfortable with JavaScript and WebHID could extract significant protocol insight just from reading this code.
 
 ---
