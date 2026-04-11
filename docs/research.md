@@ -106,7 +106,7 @@ Wireshark + USBPcap will capture every packet exchanged during these operations.
 
 ---
 
-## 8 AULA WebHID drivers — an inspectable entry point
+## 8. AULA WebHID drivers — an inspectable entry point
 AULA has developed browser-based WebHID drivers for some of their keyboard lines, accessible directly from any Chromium-based browser (Chrome, Edge, Opera). These are live web apps that communicate with the keyboard via the WebHID API — no installation required.
 
 ModelURLWIN60/68HE Standarddevice.aulacn.comWIN60/68HE PRO/MAXwin.aulacn.comHERO68 Standardhero.aulastar.comHERO68 ULTRA / PRO/MAXmagnet.aulastar.com
