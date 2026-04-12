@@ -34,6 +34,10 @@ PID: 010C
 
 **`VID 258A` appears to be shared across the entire AULA keyboard lineup.** This is confirmed across multiple models and community projects. Notably, the Royal Kludge RK61 also uses `VID 258A` (PID `004a` and `007a` depending on variant), confirming that both AULA and RK share the same SinoWealth chip family.
 
+**Important note:** The F75 MAX uses a different VID — `0C45` (SONiX) 
+instead of `258A` (SinoWealth). Same physical chip family but different 
+USB identifier. To be verified for the L99.
+
 When the L99 arrives, the first step is to verify its VID/PID via Windows Device Manager. If VID is `258A`, the L99 is in the same family.
 
 ### How to check VID/PID on Windows
@@ -97,7 +101,7 @@ For image/screen data, the protocol likely uses "tunneling" — the same basic p
 
 ## 5. Existing open-source projects
 
-### AULA-specific — Rang S (most relevant)
+### AULA-specific — Rank S (most relevant)
 
 | Project | Model | What's done | Language | Link |
 |---|---|---|---|---|
@@ -105,8 +109,9 @@ For image/screen data, the protocol likely uses "tunneling" — the same basic p
 | F75_Initializer | AULA F75 MAX | **Controls the screen from Linux**, RTC sync via HID, captures included (`keyboard5/6/7.pcapng`), documents 4-packet init sequence | Python | [GitHub](https://github.com/Simon-Martens/F75_Initializer) |
 | win-68-he-tool | AULA WIN60/68 HE | **Copy of official AULA web driver JS source** — inspectable in browser DevTools, reveals packet format directly | JavaScript | [GitHub](https://github.com/caioalonso/win-68-he-tool) |
 | OpenRGB issue #5166 | AULA F99 | **Full wireless protocol reverse engineered** by rodrigost23, captures + byte-level documentation, working PoC in OpenRGB PRs !3026 and !3027 | — | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB/-/work_items/5166) |
+| NollieL/SignalRgb_CN_Key | AULA Series (F75, F99, etc.) | Full AULA protocol in readable JavaScript — `Aula Series.js` contains the complete communication logic for SignalRGB | JavaScript | [GitHub](https://github.com/NollieL/SignalRgb_CN_Key) |
 
-### AULA-specific — Rang A (solid reference)
+### AULA-specific — Rank A (solid reference)
 
 | Project | Model | What's done | Language | Link |
 |---|---|---|---|---|
@@ -117,6 +122,7 @@ For image/screen data, the protocol likely uses "tunneling" — the same basic p
 | tarantula | AULA (generic) | Open-source Rust library for AULA keyboard configuration, early stage | Rust | [GitHub](https://github.com/sangwon090/tarantula) |
 | aula-f75-configurator | AULA F75 | Cross-platform WebHID configurator in progress, updated recently | TypeScript | [GitHub](https://github.com/AmoabaKelvin/aula-f75-configurator) |
 | aegis-2067usb | AULA F2067 | Full USB protocol reverse engineered, CLI tool | Rust | [GitHub](https://github.com/progzone122/aegis-2067usb-custom-software) |
+
 
 ### AULA-specific — OpenRGB tracker
 
@@ -210,6 +216,8 @@ Post from the same person behind [aula_contol-f87](https://github.com/umesh70/au
 | 🥇 1 | rodrigost23 | Reverse-engineered the complete F99 wireless protocol, submitted working OpenRGB PRs, active in AULA ecosystem | [GitLab](https://gitlab.com/rodrigost23) |
 | 🥈 2 | veysiemrah | Built the most complete AULA open-source project (191 commits), full protocol docs, same VID | [GitHub](https://github.com/veysiemrah/aula-rgb-controller) |
 | 🥈 2 | Simon-Martens | **Already working on AULA screen control from Linux**, has captures and working init code | [GitHub](https://github.com/Simon-Martens/F75_Initializer) |
+| 🥉 3 | dorok15 | Identified SH68F073 MCU, confirmed standard HID feature reports | r/aula |
+| 🥉 3 | darkdex52 | F75 MAX user with Wireshark captures available, opened OpenRGB issue #5326 | [GitLab](https://gitlab.com/darkdex52) |
 | 🥉 3 | umesh70 | Active reverse engineering of F87, looking for collaborators, same frustration | [GitHub](https://github.com/umesh70/aula_contol-f87) |
 | 🥉 3 | marcoslor | Built F87 controller, protocol documented, Python + WebHID | [GitHub](https://github.com/marcoslor/Aula-F87-Controller) |
 | 4 | rnayabed | Built Rangoli (RK reverse engineering), similar approach | [GitHub](https://github.com/rnayabed/rangoli) |
