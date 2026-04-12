@@ -125,9 +125,14 @@ Open an issue and describe the widget you'd want. Community input shapes what ge
 | Project | Description |
 |---|---|
 | [Rangoli](https://github.com/rnayabed/rangoli) | Open-source RK keyboard software via USB reverse engineering |
-| [Kludge Knight](https://github.com/vinc3m1/kludgeknight) | Browser-based RK configurator |
-| [aegis-2067usb](https://github.com/progzone122/aegis-2067usb-custom-software) | Open-source custom software for AULA F2067 |
-| [OpenRazer](https://github.com/openrazer/openrazer) | Community Razer driver for Linux — proof that this model works |
+| [Kludge Knight](https://github.com/vinc3m1/kludgeknight) | Browser-based RK configurator built on Rangoli's protocol research |
+| [aegis-2067usb](https://github.com/progzone122/aegis-2067usb-custom-software) | Open-source custom software for AULA F2067 — protocol fully documented |
+| [aula-rgb-controller](https://github.com/veysiemrah/aula-rgb-controller) | Complete RGB controller for AULA F87 TK — 191 commits, full protocol documentation in C |
+| [F75_Initializer](https://github.com/Simon-Martens/F75_Initializer) | Screen initialization for AULA F75 MAX from Linux — closest existing work to L99 screen control |
+| [Aula-F87-Controller](https://github.com/marcoslor/Aula-F87-Controller) | Protocol documented, Python CLI + WebHID app for AULA F87 |
+| [OpenRGB issue #5166](https://gitlab.com/CalcProgrammer1/OpenRGB/-/work_items/5166) | Complete wireless protocol reverse engineered for AULA F99 — packet structure, CRC, working PoC |
+| [win-68-he-tool](https://github.com/caioalonso/win-68-he-tool) | Local copy of official AULA web driver in readable JavaScript |
+| [OpenRazer](https://github.com/openrazer/openrazer) | Community Razer driver for Linux — proof that this model works at scale |
 | [Elgato Stream Deck](https://github.com/elgato/streamdeck) | The gold standard for what keyboard-adjacent widgets can look like |
 
 ---
