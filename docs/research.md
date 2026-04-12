@@ -10,20 +10,29 @@ AULA is a Chinese peripheral brand whose keyboards are built on chips manufactur
 
 **Key implication:** reverse engineering work done on one AULA keyboard is very likely to carry over to other AULA models, including the L99.
 
+### Firmware identification
+A community analysis on r/aula (by user dorok15) identified the firmware chip as **Sino Wealth SH68F073 (8051 MCU)**. Key findings from that analysis:
+- The keyboard uses standard USB HID feature reports — not a locked-down proprietary driver
+- RGB, key remapping, macros, profiles are all handled via HID commands
+- Key matrix + FN layers + config data were extractable
+- Firmware updates use standard ISP + Intel HEX format
+- A macOS/Linux replacement app is considered feasible
+- Open-source tools already exist for similar SinoWealth chips
+
 ---
 
 ## 2. USB identifiers — the VID/PID system
 
 Every USB device has a **Vendor ID (VID)** and a **Product ID (PID)**. The VID identifies the manufacturer, the PID identifies the specific product.
 
-From the OpenRGB issue tracker, the AULA F75 has been identified as:
+From the OpenRGB issue tracker, the AULA F75 and F99 have been identified as:
 
 ```
-VID: 258A
+VID: 258A (wired)
 PID: 010C
 ```
 
-**`VID 258A` appears to be shared across the entire AULA keyboard lineup.** This is the most important piece of information for the project — it means all AULA keyboards speak the same "language" at the USB level, even if some protocol details vary per model.
+**`VID 258A` appears to be shared across the entire AULA keyboard lineup.** This is confirmed across multiple models and community projects. Notably, the Royal Kludge RK61 also uses `VID 258A` (PID `004a` and `007a` depending on variant), confirming that both AULA and RK share the same SinoWealth chip family.
 
 When the L99 arrives, the first step is to verify its VID/PID via Windows Device Manager. If VID is `258A`, the L99 is in the same family.
 
@@ -37,41 +46,85 @@ When the L99 arrives, the first step is to verify its VID/PID via Windows Device
 
 ## 3. USB interface structure (typical AULA layout)
 
-Based on research across multiple AULA models, the keyboard exposes **multiple USB interfaces simultaneously**:
+Based on research across multiple AULA models (confirmed by umesh70's analysis of the F87 on r/AskReverseEngineering), the keyboard exposes **multiple USB interfaces simultaneously**:
 
 | Interface | Purpose |
 |---|---|
 | Boot HID | Standard keypress events (works on any OS) |
 | Media HID | Volume, play/pause, media shortcuts |
-| Vendor Specific | Proprietary communication with the driver software |
+| Vendor Specific (UsagePage 0xff00) | Proprietary communication with the driver software — repeated multiple times |
 
 The **Vendor Specific interface** is where everything interesting happens — RGB control, macro programming, and (on the L99) screen commands. This is the interface to target during reverse engineering.
 
 ---
 
-## 4. Packet structure hypothesis
+## 4. Packet structure — confirmed findings
 
-Based on analysis of similar AULA/SinoWealth keyboards:
+### Wired mode (AULA F87 / F75 family)
+Based on multiple open-source projects and community captures:
+- Commands are sent as **64-byte HID feature reports**
+- Checksum: `sum(packet[0:31]) & 0xFF` (confirmed by Simon-Martens for F75 MAX)
+- 4-step write protocol (confirmed in veysiemrah's protocol notes)
+- Per-key color encoding uses planar RGB format
 
-- Commands are sent as **64-byte HID reports** (standard HID packet size)
-- Data is sent as "blobs" — raw binary payloads encoding configuration or image data
-- Some commands may include a **checksum** at the end for data integrity validation
-- For image/screen data, the protocol likely uses **"tunneling"** — the same basic packet structure as RGB commands, but with much denser payloads to transfer pixel data
+### Wireless mode (AULA F99 — fully documented by rodrigost23)
+Packets have **20 bytes** structured as follows:
 
-This is the same approach used by AIDA64 for pushing system stats to LCD panels on PC cases, and by the Stream Deck for its per-key displays.
+| Byte(s) | Size | Group | Description |
+|---|---|---|---|
+| 0-4 | 5 | Header | Command and sequencing info |
+| 5-18 | 14 | Payload | The actual data |
+| 19 | 1 | CRC | Sum of bytes 0-18 & 0xFF |
+
+Header breakdown:
+| Byte | Field | Values | Description |
+|---|---|---|---|
+| 0 | Signature | 0x13 | Static, part of command signature |
+| 1 | Command type | 0x05, 0x07, **0x88** | **0x88 = send LED color info** |
+| 2 | Total packets | 0x01-0x0N | Total packets in message |
+| 3 | Packet index | 0x00-0x0N-1 | Current packet index |
+| 4 | Mode + Data length | 0x10 or 0x20 + N | 0x10 = per-key, 0x20 = solid color |
+
+Example — set full keyboard red:
+`0x13, 0x88, 0x1, 0x0, 0x23, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xbe`
+
+Model IDs embedded in protocol: `0xa4` = F99, `0xcd` = F75. **These IDs are shared between wireless and wired protocols**, meaning SignalRGB's Sinowealth plugin (which supports wired mode) uses the same IDs.
+
+### Screen-specific hypothesis
+For image/screen data, the protocol likely uses "tunneling" — the same basic packet structure as RGB commands, but with much denser payloads to transfer pixel data. Simon-Martens confirmed that the F75 MAX screen uses 64-byte HID feature reports on interface 3, with a 4-packet initialization sequence.
 
 ---
 
 ## 5. Existing open-source projects
 
-### AULA-specific
+### AULA-specific — Rang S (most relevant)
 
 | Project | Model | What's done | Language | Link |
 |---|---|---|---|---|
+| aula-rgb-controller | AULA F87 TK | Full RGB controller, 191 commits, complete protocol documentation in `tools/protocol_notes.md`, GTK4 GUI + daemon + CLI | C | [GitHub](https://github.com/veysiemrah/aula-rgb-controller) |
+| F75_Initializer | AULA F75 MAX | **Controls the screen from Linux**, RTC sync via HID, captures included (`keyboard5/6/7.pcapng`), documents 4-packet init sequence | Python | [GitHub](https://github.com/Simon-Martens/F75_Initializer) |
+| win-68-he-tool | AULA WIN60/68 HE | **Copy of official AULA web driver JS source** — inspectable in browser DevTools, reveals packet format directly | JavaScript | [GitHub](https://github.com/caioalonso/win-68-he-tool) |
+| OpenRGB issue #5166 | AULA F99 | **Full wireless protocol reverse engineered** by rodrigost23, captures + byte-level documentation, working PoC in OpenRGB PRs !3026 and !3027 | — | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB/-/work_items/5166) |
+
+### AULA-specific — Rang A (solid reference)
+
+| Project | Model | What's done | Language | Link |
+|---|---|---|---|---|
+| Aula-F87-Controller | AULA F87 | Protocol documented, Python CLI + WebHID app, captures in `/captures`, `docs/PROTOCOL.md` | Python / TypeScript | [GitHub](https://github.com/marcoslor/Aula-F87-Controller) |
+| aula-f87pro | AULA F87 Pro | CLI Python, RGB control on Linux, udev rules, VID `258A:010C` confirmed | Python | [GitHub](https://github.com/Ahorts/aula-f87pro) |
+| aula-keyboard | AULA (generic) | Webapp React + TypeScript in progress, WebHID approach | TypeScript | [GitHub](https://github.com/KayviaHarriott/aula-keyboard) |
+| aula_contol-f87 | AULA F87 | Jupyter Notebook exploration + C test code, active analysis of vendor-specific HID interfaces | Python / C | [GitHub](https://github.com/umesh70/aula_contol-f87) |
+| tarantula | AULA (generic) | Open-source Rust library for AULA keyboard configuration, early stage | Rust | [GitHub](https://github.com/sangwon090/tarantula) |
+| aula-f75-configurator | AULA F75 | Cross-platform WebHID configurator in progress, updated recently | TypeScript | [GitHub](https://github.com/AmoabaKelvin/aula-f75-configurator) |
 | aegis-2067usb | AULA F2067 | Full USB protocol reverse engineered, CLI tool | Rust | [GitHub](https://github.com/progzone122/aegis-2067usb-custom-software) |
-| Aula-F87-Controller | AULA F87 | Protocol documented, Python CLI + WebHID app | Python / TypeScript | [GitHub](https://github.com/marcoslor/Aula-F87-Controller) |
-| OpenRGB issue #4232 | AULA F75 | VID/PID identified, device capture requested | — | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB/-/work_items/4232) |
-| OpenRGB issue #5253 | AULA F108Pro | Device request opened | — | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB/-/issues/5253) |
+
+### AULA-specific — OpenRGB tracker
+
+| Issue | Model | Status | Link |
+|---|---|---|---|
+| #5166 | AULA F99 | Full protocol documented by rodrigost23, PRs submitted | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB/-/work_items/5166) |
+| #4232 | AULA F75 | VID/PID identified | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB/-/work_items/4232) |
+| #5253 | AULA F108Pro | Device request opened | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB/-/issues/5253) |
 
 ### Royal Kludge (same VID family, similar protocol)
 
@@ -79,8 +132,14 @@ This is the same approach used by AIDA64 for pushing system stats to LCD panels 
 |---|---|---|
 | Rangoli | Full USB protocol reverse engineered via Wireshark, cross-platform app | [GitHub](https://github.com/rnayabed/rangoli) |
 | Kludge Knight | Browser-based WebHID configurator built on Rangoli's protocol research | [GitHub](https://github.com/vinc3m1/kludgeknight) |
+| rkcu | RK61 CLI Python, 22 stars, confirms VID `258A:004a` | [GitHub](https://github.com/oddlyspaced/rkcu) |
+| rk918_rk919_re | RK918/919 firmware extraction, MCU identification (SN32F248B), QMK port in progress | — | [GitHub](https://github.com/cvbicwh/rk918_rk919_re) |
 
-**Key observation:** The official AULA driver and the official Royal Kludge driver are visually nearly identical. This strongly suggests a shared codebase or SDK from the chip manufacturer, meaning the protocol structures documented in Rangoli are very likely applicable — at least partially — to the L99.
+**Key observation:** The official AULA driver and the official Royal Kludge driver are visually nearly identical. Both share VID `258A` (SinoWealth). The protocol structures documented in Rangoli are very likely applicable — at least partially — to the L99.
+
+### Other relevant ecosystems
+
+**SignalRGB** has a working Sinowealth plugin that supports AULA keyboards in wired mode, using the same model IDs as the wireless protocol documented by rodrigost23. Worth examining as an additional reference.
 
 ---
 
@@ -88,7 +147,9 @@ This is the same approach used by AIDA64 for pushing system stats to LCD panels 
 
 Most AULA keyboards (F75, F87, F2067) have no screen. The L99 adds a **3.98" IPS touchscreen at 320×480 resolution**, which is the entire point of this project.
 
-A few comparable keyboards with screens exist in the market:
+The closest existing work on AULA screens is **Simon-Martens/F75_Initializer**, which targets the F75 MAX's smaller display and has already mapped the initialization protocol. This is the most directly applicable prior art for the L99 screen work.
+
+Other comparable keyboards with screens in the market:
 - **Royal Kludge S98 / M87 / M75** — small OLED/TFT info displays (not touch, not interactive)
 - **MiraBox K1W** (Kickstarter, 2026) — 6 individual LCD keys, browser-based Web UI, open SDK promised
 - **MMOBIEL stream deck keyboard** — 6 LCD macro keys, uses Elgato Stream Deck software
@@ -100,37 +161,61 @@ A few comparable keyboards with screens exist in the market:
 
 ## 7. Why the screen protocol is likely discoverable
 
-The screen almost certainly communicates via the same **Vendor Specific USB interface** used for RGB and macros — just with larger payloads. The driver already demonstrates this works (it pushes GIFs and images to the screen). The question is just: what exact byte sequence triggers what behaviour?
+The screen almost certainly communicates via the same **Vendor Specific USB interface** used for RGB and macros — just with larger payloads. Simon-Martens confirmed this approach for the F75 MAX: interface 3, 64-byte feature reports, 4-packet init sequence.
 
-Wireshark + USBPcap will capture every packet exchanged during these operations. Once captured, comparing them against the documented F87 protocol (marcoslor's `docs/PROTOCOL.md`) should reveal the pattern quickly.
+Wireshark + USBPcap will capture every packet exchanged during driver operations. Once captured, comparing them against documented protocols (marcoslor's `docs/PROTOCOL.md`, veysiemrah's `tools/protocol_notes.md`, rodrigost23's F99 documentation) should reveal the pattern quickly.
 
 ---
 
 ## 8. AULA WebHID drivers — an inspectable entry point
-AULA has developed browser-based WebHID drivers for some of their keyboard lines, accessible directly from any Chromium-based browser (Chrome, Edge, Opera). These are live web apps that communicate with the keyboard via the WebHID API — no installation required.
 
-ModelURLWIN60/68HE Standarddevice.aulacn.comWIN60/68HE PRO/MAXwin.aulacn.comHERO68 Standardhero.aulastar.comHERO68 ULTRA / PRO/MAXmagnet.aulastar.com
+AULA has developed browser-based WebHID drivers for some of their keyboard lines:
 
-Important caveat: these web drivers are for AULA's Hall Effect / magnetic switch keyboard lines, not for the L99. The L99 only has a Windows executable driver.
+| Model | URL |
+|---|---|
+| WIN60/68HE Standard | [device.aulacn.com](https://device.aulacn.com) |
+| WIN60/68HE PRO/MAX | [win.aulacn.com](https://win.aulacn.com) |
+| HERO68 Standard | [hero.aulastar.com](https://hero.aulastar.com) |
+| HERO68 ULTRA / PRO/MAX | [magnet.aulastar.com](https://magnet.aulastar.com) |
 
-Why this matters anyway:
-These web apps are built with JavaScript — meaning their source code is fully readable in any browser's DevTools (F12 → Sources). A developer can open device.aulacn.com, inspect the JS, and see exactly how AULA structures their WebHID commands, what packet formats they use, and how they initialize communication with the keyboard.
-Even if the L99's protocol is slightly different, this gives a concrete, inspectable reference for how AULA thinks about HID communication — without needing the hardware or any reverse engineering tools.
-
-This is a unique advantage that most reverse engineering projects don't have: the manufacturer accidentally published their own protocol implementation. Someone comfortable with JavaScript and WebHID could extract significant protocol insight just from reading this code.
-
----
-
-## 9. People to potentially contact
-
-| Who | Why | Where |
-|---|---|---|
-| marcoslor | Built the F87 controller, has deep protocol knowledge, same VID | [GitHub](https://github.com/marcoslor/Aula-F87-Controller) |
-| rnayabed | Built Rangoli (RK reverse engineering), similar approach | [GitHub](https://github.com/rnayabed/rangoli) |
-| progzone122 | Built aegis-2067usb for AULA F2067 | [GitHub](https://github.com/progzone122/aegis-2067usb-custom-software) |
-| OpenRGB community | Already tracking multiple AULA devices | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB) |
+These are for Hall Effect keyboard lines, not the L99. But their JavaScript source is fully readable in browser DevTools. **caioalonso archived a local copy** of the WIN60/68HE web driver at [github.com/caioalonso/win-68-he-tool](https://github.com/caioalonso/win-68-he-tool) — this is the most accessible entry point to understand how AULA structures HID communication without any hardware.
 
 ---
 
+## 9. Community discussions
+
+### r/aula — dorok15
+Analysis post confirming:
+- Standard USB HID feature reports (not locked-down)
+- Sino Wealth chipset confirmed (same as RK)
+- Firmware: **SH68F073 (8051 MCU)**
+- RGB/macros/profiles all via HID commands
+- macOS/Linux replacement app considered feasible
+- No working replacement tool yet — author looking for HID/USB contributors
+
+### r/AskReverseEngineering — umesh70
+Post from the same person behind [aula_contol-f87](https://github.com/umesh70/aula_contol-f87):
+- Identified Interface 1 with UsagePage 0xff00 (vendor specific) as the RGB control channel
+- Has HID descriptor dump available to share
+- Plans to capture USB traffic with Wireshark + USBPcap in a VM
+- Actively looking for help decoding report format
+- 0 replies so far — **high priority contact**
+
+---
+
+## 10. People to potentially contact (priority order)
+
+| Priority | Who | Why | Where |
+|---|---|---|---|
+| 🥇 1 | rodrigost23 | Reverse-engineered the complete F99 wireless protocol, submitted working OpenRGB PRs, active in AULA ecosystem | [GitLab](https://gitlab.com/rodrigost23) |
+| 🥈 2 | veysiemrah | Built the most complete AULA open-source project (191 commits), full protocol docs, same VID | [GitHub](https://github.com/veysiemrah/aula-rgb-controller) |
+| 🥈 2 | Simon-Martens | **Already working on AULA screen control from Linux**, has captures and working init code | [GitHub](https://github.com/Simon-Martens/F75_Initializer) |
+| 🥉 3 | umesh70 | Active reverse engineering of F87, looking for collaborators, same frustration | [GitHub](https://github.com/umesh70/aula_contol-f87) |
+| 🥉 3 | marcoslor | Built F87 controller, protocol documented, Python + WebHID | [GitHub](https://github.com/marcoslor/Aula-F87-Controller) |
+| 4 | rnayabed | Built Rangoli (RK reverse engineering), similar approach | [GitHub](https://github.com/rnayabed/rangoli) |
+| 4 | progzone122 | Built aegis-2067usb for AULA F2067 | [GitHub](https://github.com/progzone122/aegis-2067usb-custom-software) |
+| 4 | OpenRGB community | Already tracking multiple AULA devices | [GitLab](https://gitlab.com/CalcProgrammer1/OpenRGB) |
+
+---
 
 *This document will be updated as the project progresses.*
