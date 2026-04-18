@@ -90,7 +90,7 @@ The L99 exposes **two separate USB devices** when connected. The keyboard and sc
 
 ### Screen protocol — partially reverse engineered 🔶
 
-Two Wireshark captures have been analyzed (`captures/capture_red_picture.pcapng` and `captures/capture_luffy_Picture.pcapng`). Key findings:
+Two Wireshark captures have been analyzed (`captures/capture_red_picture.pcapng` and `captures/capture_complex_picture.pcapng`). Key findings:
 
 **Image transfer format (confirmed):**
 ```
