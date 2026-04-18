@@ -181,8 +181,8 @@ The following Wireshark captures are available in the `captures/` directory:
 
 | File | What it contains | Status |
 |---|---|---|
-| `capture_red_picture.pcapng` | Sending a solid red 480×480 JPEG to the screen | ✅ Analyzed |
-| `capture_complex_picture.pcapng` | Sending a complex image (320×480) to the screen | ✅ Analyzed |
+| `capture_red_picture.pcapng` | Sending a solid red 320×480 JPEG to the screen | ✅ Analyzed |
+| `capture_complex_picture.pcapng` | Sending a complex image 320×480 to the screen | ✅ Analyzed |
 
 More captures will be added as the protocol is mapped.
 
