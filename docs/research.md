@@ -70,7 +70,7 @@ Two captures were made on the day of hardware reception, using Wireshark + USBPc
 | File | Image sent | Resolution |
 |---|---|---|
 | `captures/capture_red_picture.pcapng` | Solid red rectangle | 320 × 480 px |
-| `captures/capture_complex_Picture.pcapng` | Complex  image | 320 × 480 px |
+| `captures/capture_complex_picture.pcapng` | Complex image | 320 × 480 px |
 
 ### Image transfer protocol (confirmed)
 
